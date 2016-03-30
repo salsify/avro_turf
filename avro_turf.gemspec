@@ -27,4 +27,5 @@ Gem::Specification.new do |spec|
   spec.add_development_dependency "webmock"
   spec.add_development_dependency "sinatra"
   spec.add_development_dependency "json_spec"
+  spec.add_development_dependency "activesupport"
 end
