@@ -38,16 +38,41 @@ describe AvroTurf::Messaging do
     AVSC
   end
 
-  it "encodes and decodes messages" do
-    message = { "full_name" => "John Doe" }
-    data = avro.encode(message, schema_name: "person")
-    expect(avro.decode(data)).to eq message
+  shared_examples_for "encoding and decoding" do
+    it "encodes and decodes messages" do
+      message = { "full_name" => "John Doe" }
+      data = avro.encode(message, schema_name: "person")
+      expect(avro.decode(data)).to eq message
+    end
+
+    it "allows specifying a reader's schema" do
+      message = { "full_name" => "John Doe" }
+      data = avro.encode(message, schema_name: "person")
+      expect(avro.decode(data, schema_name: "person")).to eq message
+    end
   end
 
-  it "allows specifying a reader's schema" do
-    message = { "full_name" => "John Doe" }
-    data = avro.encode(message, schema_name: "person")
-    expect(avro.decode(data, schema_name: "person")).to eq message
+  it_behaves_like "encoding and decoding"
+
+  context "with a provided schema store" do
+    let(:schema_store) { AvroTurf::SchemaStore.new(path: "spec/schemas") }
+
+    let(:avro) do
+      AvroTurf::Messaging.new(
+        registry_url: registry_url,
+        schema_store: schema_store,
+        logger: logger
+      )
+    end
+
+    it_behaves_like "encoding and decoding"
+
+    it "uses the provided schema store" do
+      allow(schema_store).to receive(:find).and_call_original
+      message = { "full_name" => "John Doe" }
+      data = avro.encode(message, schema_name: "person")
+      expect(schema_store).to have_received(:find).with("person", nil)
+    end
   end
 
   context "when active_support/core_ext is present" do
@@ -70,10 +95,6 @@ describe AvroTurf::Messaging do
       end
     end
 
-    it "encodes and decodes messages" do
-      message = { "full_name" => "John Doe" }
-      data = avro.encode(message, schema_name: "person")
-      expect(avro.decode(data)).to eq message
-    end
+    it_behaves_like "encoding and decoding"
   end
 end
