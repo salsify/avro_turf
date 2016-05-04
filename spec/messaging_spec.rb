@@ -14,6 +14,8 @@ describe AvroTurf::Messaging do
     )
   }
 
+  let(:message) { { "full_name" => "John Doe" } }
+
   before do
     FileUtils.mkdir_p("spec/schemas")
   end
@@ -40,13 +42,11 @@ describe AvroTurf::Messaging do
 
   shared_examples_for "encoding and decoding" do
     it "encodes and decodes messages" do
-      message = { "full_name" => "John Doe" }
       data = avro.encode(message, schema_name: "person")
       expect(avro.decode(data)).to eq message
     end
 
     it "allows specifying a reader's schema" do
-      message = { "full_name" => "John Doe" }
       data = avro.encode(message, schema_name: "person")
       expect(avro.decode(data, schema_name: "person")).to eq message
     end
@@ -69,10 +69,17 @@ describe AvroTurf::Messaging do
 
     it "uses the provided schema store" do
       allow(schema_store).to receive(:find).and_call_original
-      message = { "full_name" => "John Doe" }
-      data = avro.encode(message, schema_name: "person")
+      avro.encode(message, schema_name: "person")
       expect(schema_store).to have_received(:find).with("person", nil)
     end
+  end
+
+  it "caches parsed schemas for decoding" do
+    data = avro.encode(message, schema_name: "person")
+    avro.decode(data)
+    allow(Avro::Schema).to receive(:parse).and_call_original
+    expect(avro.decode(data)).to eq message
+    expect(Avro::Schema).not_to have_received(:parse)
   end
 
   context "when active_support/core_ext is present" do
